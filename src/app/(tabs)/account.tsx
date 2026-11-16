@@ -1,10 +1,13 @@
 import { Image } from "expo-image";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, radius } from "@/constants/theme";
+import { FormScroll } from "@/components/form-scroll";
+import { StudioCredit } from "@/components/studio-credit";
+import { AccountBenefits } from "@/components/account-benefits";
 import { Button, Field, Message, ScreenLoader } from "@/components/ui";
 import { ApiError, api, type Account, type Company } from "@/lib/api";
 import { formatDate } from "@/lib/money";
@@ -24,34 +27,45 @@ export default function AccountScreen() {
   if (!ready || (token && account.isLoading)) return <ScreenLoader />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
+    <FormScroll style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 28 }]}>
       <Text style={styles.title}>Account</Text>
       {token && account.data ? (
-        <Profile account={account.data.data} onSaved={() => account.refetch()} onSignOut={async () => {
-          await api("/api/v1/auth/logout", { method: "POST" }).catch(() => undefined);
-          await signOut();
-          await client.invalidateQueries();
-        }} />
+        <>
+          <View style={styles.card}>
+            <Text style={styles.kicker}>Your benefits</Text>
+            <Text style={styles.lead}>
+              {account.data.data.userType === "consumer"
+                ? "You can request a quotation and discuss it with OM PVRD. Discounted trade prices are for retailer, carpenter, and contractor accounts. This consumer account sees MRP."
+                : "You are seeing discounted trade prices. Add sizes and quantities, request a quotation, then discuss it with OM PVRD."}
+            </Text>
+            <Button label="Request quotation" onPress={() => router.push("/quote")} />
+            <Button label="Discuss with OM PVRD" variant="outline" onPress={() => router.push("/quotes")} />
+          </View>
+          <Profile account={account.data.data} onSaved={() => account.refetch()} onSignOut={async () => {
+            await api("/api/v1/auth/logout", { method: "POST" }).catch(() => undefined);
+            await signOut();
+            await client.invalidateQueries();
+          }} />
+        </>
       ) : (
         <View style={styles.card}>
-          <Text style={styles.lead}>Sign in to see the dealer rate on a retailer or carpenter account. Guests and consumers stay on MRP.</Text>
+          <Text style={styles.kicker}>Why sign in</Text>
+          <AccountBenefits />
           <Button label="Sign in" onPress={() => router.push("/login")} />
-          <Button label="Sign up" variant="outline" onPress={() => router.push("/signup")} />
+          <Button label="Create account" variant="outline" onPress={() => router.push("/signup")} />
           {account.isError ? <Message text={account.error.message} /> : null}
         </View>
       )}
       {company.data ? (
         <View style={styles.card}>
-          <Text style={styles.kicker}>Contact</Text>
+          <Text style={styles.kicker}>Contact us</Text>
           <Text style={styles.company}>{company.data.data.companyName}</Text>
           {company.data.data.address ? <Text style={styles.meta}>{company.data.data.address}</Text> : null}
           {company.data.data.phone ? <Text style={styles.meta}>{company.data.data.phone}</Text> : null}
         </View>
       ) : null}
-      <Link href="/" style={styles.home}>
-        Back to the catalogue
-      </Link>
-    </ScrollView>
+      <StudioCredit />
+    </FormScroll>
   );
 }
 
@@ -92,17 +106,17 @@ function Profile({ account, onSaved, onSignOut }: { account: Account; onSaved: (
     <View style={styles.card}>
       {account.photoUrl ? <Image source={{ uri: account.photoUrl }} style={styles.photo} contentFit="cover" /> : null}
       <Text style={styles.role}>
-        {account.role} · registered {formatDate(account.createdAt)}
+        {account.role} · Member since {formatDate(account.createdAt)}
       </Text>
       <Field label="Full name" value={name} onChangeText={setName} error={field === "name" ? error : undefined} />
       <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" error={field === "email" ? error : undefined} />
       <Field label="City" value={city} onChangeText={setCity} error={field === "city" ? error : undefined} />
-      <Text style={styles.meta}>Mobile {account.mobile}</Text>
+      <Text style={styles.meta}>Mobile number {account.mobile}</Text>
       <Field label="New password" value={password} onChangeText={setPassword} secureTextEntry error={field === "password" ? error : undefined} />
-      <Field label="Confirm password" value={confirm} onChangeText={setConfirm} secureTextEntry error={field === "confirm" ? error : undefined} />
+      <Field label="Confirm new password" value={confirm} onChangeText={setConfirm} secureTextEntry error={field === "confirm" ? error : undefined} />
       {error && !field ? <Text style={styles.error}>{error}</Text> : null}
-      {saved ? <Text style={styles.saved}>Profile saved.</Text> : null}
-      <Button label="Save profile" onPress={save} busy={busy} />
+      {saved ? <Text style={styles.saved}>Your changes are saved.</Text> : null}
+      <Button label="Save changes" onPress={save} busy={busy} />
       <Button label="Sign out" variant="outline" onPress={onSignOut} />
     </View>
   );
@@ -117,7 +131,6 @@ const styles = StyleSheet.create({
   kicker: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" },
   company: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 18 },
   meta: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
-  home: { color: colors.navy, fontFamily: fonts.medium, fontSize: 15 },
   photo: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.muted },
   role: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14 },
   error: { color: colors.danger, fontFamily: fonts.regular, fontSize: 14 },

@@ -4,11 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, radius } from "@/constants/theme";
+import { GuestOffer } from "@/components/account-benefits";
+import { StudioCredit } from "@/components/studio-credit";
 import { Message, ScreenLoader } from "@/components/ui";
 import { api, type Category } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
 export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();
+  const { token } = useSession();
   const categories = useQuery({ queryKey: ["categories"], queryFn: () => api<{ data: Category[] }>("/api/v1/categories") });
 
   if (categories.isLoading) return <ScreenLoader />;
@@ -22,7 +26,13 @@ export default function CategoriesScreen() {
       keyExtractor={(item) => item.id}
       refreshing={categories.isRefetching}
       onRefresh={() => categories.refetch()}
-      ListHeaderComponent={<Text style={styles.title}>Categories</Text>}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.title}>Categories</Text>
+          {token ? null : <GuestOffer compact />}
+        </View>
+      }
+      ListFooterComponent={<StudioCredit />}
       renderItem={({ item }) => (
         <Pressable
           style={styles.row}
@@ -42,7 +52,8 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   list: { padding: 16, gap: 12 },
-  title: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 28, marginBottom: 4 },
+  header: { gap: 12, marginBottom: 4 },
+  title: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 28 },
   row: { flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border, padding: 10 },
   image: { width: 72, height: 72, borderRadius: 12, backgroundColor: colors.muted },
   copy: { flex: 1 },

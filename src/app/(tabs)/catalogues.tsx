@@ -4,11 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts, radius } from "@/constants/theme";
+import { GuestOffer } from "@/components/account-benefits";
+import { StudioCredit } from "@/components/studio-credit";
 import { Button, Message, ScreenLoader } from "@/components/ui";
 import { api, type Catalogue } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
 export default function CataloguesScreen() {
   const insets = useSafeAreaInsets();
+  const { token } = useSession();
   const catalogues = useQuery({
     queryKey: ["catalogues"],
     queryFn: () => api<{ data: Catalogue[] }>("/api/v1/catalogues"),
@@ -29,22 +33,28 @@ export default function CataloguesScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Catalogues</Text>
           <Text style={styles.lead}>Print-ready PDFs for each category.</Text>
+          {token ? null : <GuestOffer compact />}
         </View>
       }
-      renderItem={({ item }) => (
-        <View style={styles.row}>
-          {item.image ? <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" /> : <View style={styles.image} />}
-          <View style={styles.copy}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.count}>
-              {item.products} active {item.products === 1 ? "product" : "products"}
-              {item.pdfUrl ? "" : " · PDF not stored yet"}
-            </Text>
-            {item.viewUrl ? <Button label="View catalogue" variant="outline" onPress={() => WebBrowser.openBrowserAsync(item.viewUrl!)} /> : null}
-            {item.pdfUrl ? <Button label="Download PDF" variant="outline" onPress={() => WebBrowser.openBrowserAsync(item.pdfUrl!)} /> : null}
+      ListFooterComponent={<StudioCredit />}
+      renderItem={({ item }) => {
+        const catalogueUrl = item.viewUrl ?? item.pdfUrl;
+        return (
+          <View style={styles.row}>
+            {item.image ? <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" /> : <View style={styles.image} />}
+            <View style={styles.copy}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.count}>
+                {item.products} active {item.products === 1 ? "product" : "products"}
+                {item.pdfUrl ? "" : " · PDF not stored yet"}
+              </Text>
+              {catalogueUrl ? (
+                <Button label="View catalogue" variant="outline" onPress={() => WebBrowser.openBrowserAsync(catalogueUrl)} />
+              ) : null}
+            </View>
           </View>
-        </View>
-      )}
+        );
+      }}
     />
   );
 }
@@ -52,7 +62,7 @@ export default function CataloguesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   list: { padding: 16, gap: 12 },
-  header: { marginBottom: 8 },
+  header: { marginBottom: 8, gap: 12 },
   title: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 28 },
   lead: { marginTop: 4, color: colors.steel, fontFamily: fonts.regular, fontSize: 15 },
   row: { backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border, padding: 12, gap: 12 },

@@ -37,7 +37,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
     throw new ApiError("The catalogue could not be reached. Check that the website is running.", 0);
   }
 
@@ -58,20 +59,99 @@ export type ProductCard = {
   price?: number;
 };
 
+export type ProductList = {
+  data: ProductCard[];
+  trade?: boolean;
+  total: number;
+  nextCursor: string | null;
+};
+
+export type ProductVariant = {
+  id?: string;
+  name: string;
+  finish: string | null;
+  size: string | null;
+  image: string | null;
+  mrp: string;
+  points: string;
+  packing?: string | null;
+  unit?: string | null;
+  price?: string | null;
+};
+
 export type ProductDetail = ProductCard & {
   description: string | null;
+  images: string[];
   specs: { label: string; value: string }[];
   displayRates: { label: string; formula: string; value: string | null }[];
-  variants: {
+  variants: ProductVariant[];
+  related: ProductCard[];
+};
+
+export type BucketItem = {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  name: string;
+  sku: string | null;
+  finish: string | null;
+  size: string | null;
+  quantity: number;
+  unitPrice: string;
+  priceLabel: "mrp" | "trade";
+  mrp: string;
+  tradePrice: string;
+  image: string | null;
+  available: boolean;
+};
+
+export type Bucket = { items: BucketItem[]; count: number; pieces: number };
+
+export type QuotationSummary = {
+  id: string;
+  reference: string;
+  status: "open" | "closed";
+  outcome: "pending" | "accepted" | "declined";
+  createdAt: string | null;
+  updatedAt: string | null;
+  items: number;
+  pieces: number;
+  summary: string;
+  previews?: { name: string; image: string | null }[];
+};
+
+export type QuotationDetail = {
+  id: string;
+  reference: string;
+  status: "open" | "closed";
+  outcome: "pending" | "accepted" | "declined";
+  note: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  closedAt: string | null;
+  items: {
+    id: string;
     name: string;
+    sku: string | null;
     finish: string | null;
     size: string | null;
-    image: string | null;
-    mrp: string;
-    points: string;
-    price?: string | null;
+    unit: string | null;
+    packing: string | null;
+    quantity: number;
+    unitPrice: string;
+    priceLabel: string;
+    availability: "unspecified" | "available" | "limited" | "unavailable";
+    leadTime: string | null;
+    itemNote: string | null;
   }[];
-  related: ProductCard[];
+  messages: {
+    id: string;
+    role: "user" | "admin";
+    author: string;
+    kind: string;
+    body: string;
+    createdAt: string | null;
+  }[];
 };
 
 export type Category = {
@@ -96,6 +176,7 @@ export type Banner = {
   description: string | null;
   image: string | null;
   type: string;
+  redirectUrl: string | null;
 };
 
 export type Offer = {

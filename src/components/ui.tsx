@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { Link, type Href } from "expo-router";
+import { memo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { colors, fonts, radius } from "@/constants/theme";
 import type { ProductCard } from "@/lib/api";
@@ -48,22 +49,59 @@ export function PriceBlock({ product, light = false }: { product: Pick<ProductCa
   );
 }
 
-export function ProductCardView({ product }: { product: ProductCard }) {
+export const ProductCardView = memo(function ProductCardView({ product, badge }: { product: ProductCard; badge?: string }) {
+  const trade = typeof product.price === "number";
+  const amount = trade ? product.price ?? product.mrp : product.mrp;
+  const struck = trade && product.mrp > amount;
+  const discount = struck && product.mrp > 0 ? Math.round((1 - amount / product.mrp) * 100) : 0;
+  const subtitle = product.sku?.trim() || product.category;
+  const tag = product.category.replace(/[^a-zA-Z0-9]+/g, "");
+
   return (
     <Link href={`/product/${product.id}` as Href} asChild>
       <Pressable style={styles.card}>
-        <Image source={{ uri: product.image }} style={styles.cardImage} contentFit="contain" />
+        <View>
+          <Image source={{ uri: product.image }} style={styles.cardImage} contentFit="contain" recyclingKey={product.id} />
+          {badge ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
+            </View>
+          ) : null}
+        </View>
         <View style={styles.cardBody}>
-          <Text style={styles.cardKicker} numberOfLines={1}>
-            {product.category}
-          </Text>
           <Text style={styles.cardTitle} numberOfLines={2}>
+            {product.brand ? <Text style={styles.cardBrand}>{product.brand} </Text> : null}
             {product.name}
           </Text>
-          <PriceBlock product={product} light />
+          <Text style={styles.cardSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+          <View style={styles.cardPriceRow}>
+            {discount > 0 ? <Text style={styles.discount}>↓{discount}%</Text> : null}
+            {struck ? <Text style={styles.strike}>{formatINR(product.mrp)}</Text> : null}
+            <Text style={styles.cardPrice}>{formatINR(amount)}</Text>
+            <Text style={styles.priceKind}>{trade ? "Trade" : "MRP"}</Text>
+          </View>
+          {tag && product.sku?.trim() ? (
+            <Text style={styles.tag} numberOfLines={1}>
+              #{tag}
+            </Text>
+          ) : null}
         </View>
       </Pressable>
     </Link>
+  );
+});
+
+export function ProductGrid({ products, badge }: { products: ProductCard[]; badge?: string }) {
+  return (
+    <View style={styles.productGrid}>
+      {products.map((product) => (
+        <View key={product.id} style={styles.productCell}>
+          <ProductCardView product={product} badge={badge} />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -126,11 +164,37 @@ const styles = StyleSheet.create({
   mrpStrike: { color: colors.steel, fontFamily: fonts.regular, fontSize: 13, textDecorationLine: "line-through" },
   lightText: { color: colors.white },
   lightMuted: { color: "rgba(255,255,255,0.7)" },
-  card: { backgroundColor: colors.card, borderRadius: radius, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
-  cardImage: { height: 160, backgroundColor: colors.white },
-  cardBody: { backgroundColor: colors.navyDeep, paddingHorizontal: 14, paddingVertical: 12 },
-  cardKicker: { color: "rgba(255,255,255,0.7)", fontFamily: fonts.medium, fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase" },
-  cardTitle: { marginTop: 4, color: colors.white, fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
+  card: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E6E6E6",
+  },
+  cardImage: { width: "100%", aspectRatio: 1, backgroundColor: "#F7F8FA" },
+  badge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    borderRadius: 999,
+    backgroundColor: colors.lime,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: { color: colors.navy, fontFamily: fonts.semibold, fontSize: 10, letterSpacing: 0.4, textTransform: "uppercase" },
+  cardBody: { flex: 1, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 10 },
+  cardTitle: { color: "#222222", fontFamily: fonts.medium, fontSize: 13, lineHeight: 17 },
+  cardBrand: { color: colors.navy, fontFamily: fonts.bold },
+  cardSubtitle: { marginTop: 2, color: "#8A9199", fontFamily: fonts.regular, fontSize: 11 },
+  cardPriceRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", gap: 4, marginTop: 6 },
+  discount: { color: "#078A4C", fontFamily: fonts.semibold, fontSize: 12 },
+  strike: { color: "#9AA0A6", fontFamily: fonts.regular, fontSize: 12, textDecorationLine: "line-through" },
+  cardPrice: { color: "#222222", fontFamily: fonts.bold, fontSize: 15 },
+  priceKind: { color: "#8B93A0", fontFamily: fonts.medium, fontSize: 10, letterSpacing: 0.4, textTransform: "uppercase" },
+  tag: { marginTop: "auto", paddingTop: 4, color: "#3D4F63", fontFamily: fonts.semibold, fontSize: 12 },
+  productGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -6 },
+  productCell: { width: "50%", paddingHorizontal: 6, marginBottom: 12 },
   field: { gap: 6 },
   fieldLabel: { color: colors.navy, fontFamily: fonts.medium, fontSize: 14 },
   input: {

@@ -9,7 +9,9 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from "@expo-google-fonts/plus-jakarta-sans";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { colors, fonts } from "@/constants/theme";
+import { SearchProvider } from "@/components/search-sheet";
 import { SessionProvider } from "@/lib/session";
 
 SplashScreen.preventAutoHideAsync();
@@ -33,23 +35,29 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.navy,
-            headerTitleStyle: { fontFamily: fonts.semibold },
-            headerShadowVisible: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="product/[id]" options={{ title: "Product" }} />
-          <Stack.Screen name="login" options={{ title: "Sign in" }} />
-          <Stack.Screen name="signup" options={{ title: "Sign up" }} />
-        </Stack>
-      </SessionProvider>
-    </QueryClientProvider>
+    <KeyboardProvider statusBarTranslucent navigationBarTranslucent preserveEdgeToEdge>
+      <QueryClientProvider client={queryClient}>
+        <SessionProvider>
+          <SearchProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.navy,
+                headerTitleStyle: { fontFamily: fonts.semibold },
+                headerShadowVisible: false,
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="product/[id]" options={{ title: "Product" }} />
+              <Stack.Screen name="quote" options={{ title: "Quotation bucket" }} />
+              <Stack.Screen name="quotes" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ title: "Sign in" }} />
+              <Stack.Screen name="signup" options={{ title: "Sign up" }} />
+            </Stack>
+          </SearchProvider>
+        </SessionProvider>
+      </QueryClientProvider>
+    </KeyboardProvider>
   );
 }

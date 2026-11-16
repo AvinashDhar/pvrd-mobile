@@ -1,8 +1,39 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { setApiToken } from "@/lib/api";
 
 const TOKEN_KEY = "pvrd_token";
+
+function webStorage() {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage;
+}
+
+async function readToken() {
+  try {
+    if (Platform.OS === "web") return webStorage()?.getItem(TOKEN_KEY) ?? null;
+    return await SecureStore.getItemAsync(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function writeToken(value: string) {
+  if (Platform.OS === "web") {
+    webStorage()?.setItem(TOKEN_KEY, value);
+    return;
+  }
+  await SecureStore.setItemAsync(TOKEN_KEY, value);
+}
+
+async function clearToken() {
+  if (Platform.OS === "web") {
+    webStorage()?.removeItem(TOKEN_KEY);
+    return;
+  }
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
 
 type SessionValue = {
   token: string | null;
@@ -18,7 +49,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    SecureStore.getItemAsync(TOKEN_KEY)
+    readToken()
       .then((stored) => {
         setApiToken(stored);
         setToken(stored);
@@ -31,12 +62,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       token,
       ready,
       async signIn(next) {
-        await SecureStore.setItemAsync(TOKEN_KEY, next);
+        await writeToken(next);
         setApiToken(next);
         setToken(next);
       },
       async signOut() {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await clearToken();
         setApiToken(null);
         setToken(null);
       },
